@@ -1,0 +1,10 @@
+[project]
+name = "agent-safety"
+version = "0.1.0"
+description = "安全审核与防幻觉模块 - 内容安全过滤与事实核查"
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"

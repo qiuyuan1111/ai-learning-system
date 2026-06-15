@@ -1,0 +1,10 @@
+[project]
+name = "agent-evaluator"
+version = "0.1.0"
+description = "评估智能体 - 学习评估与薄弱点分析"
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"

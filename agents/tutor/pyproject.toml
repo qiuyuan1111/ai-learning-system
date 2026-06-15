@@ -1,0 +1,10 @@
+[project]
+name = "agent-tutor"
+version = "0.1.0"
+description = "辅导智能体 - 个性化答疑与辅助教学"
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
