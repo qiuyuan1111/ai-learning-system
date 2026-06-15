@@ -95,26 +95,20 @@ mv *-06-core-dto.md common/
 
 项目总览、开发步骤、附录保留在根目录。
 
-### 第 5 步：基础配置文件
+### 第 5 步：写好 GitHub 提交配置
 
-为项目根目录创建：
+为项目根目录和各模块创建完整的提交配置。
+
+#### 5a. 根级配置文件
 
 | 文件 | 用途 |
 |------|------|
-| `.gitignore` | Python 项目过滤规则（`__pycache__/`, `.env`, `venv/`, `.idea/` 等） |
+| `.gitignore` | Python 项目过滤规则（`__pycache__/`, `.env`, `venv/`, `.idea/` 等），`.env.example` 需用 `!.env.example` 排除 |
 | `README.md` | 项目首页：架构图、模块说明、技术栈、快速开始、分支策略 |
 | `.env.example` | 环境变量模板（不含真实密钥） |
 | `docker-compose.yml` | 本地多服务编排（可选） |
 
-`.gitignore` 要点：
-- 过滤 `__pycache__/`、`*.py[cod]`、`*.egg-info/`
-- 过滤 `.env` 但**保留** `.env.example`（使用 `!.env.example` 排除）
-
-### 第 6 步：每个模块的独立配置文件
-
-为每个 `agents/*/` 和 `common/` 创建：
-
-#### 6a. `requirements.txt`
+#### 5b. 各模块 `requirements.txt`
 
 根据模块职责确定依赖：
 
@@ -140,7 +134,7 @@ pytest-asyncio>=0.24.0
 httpx>=0.27.0
 ```
 
-#### 6b. `pyproject.toml`
+#### 5c. 各模块 `pyproject.toml`
 
 ```toml
 [project]
@@ -155,7 +149,7 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.backends._legacy:_Backend"
 ```
 
-#### 6c. `Dockerfile`
+#### 5d. 各模块 `Dockerfile`
 
 ```dockerfile
 FROM python:3.11-slim
@@ -172,10 +166,10 @@ CMD ["uvicorn", "agents.<module>.src.main:app", "--host", "0.0.0.0", "--port", "
 ```
 
 `Dockerfile` 要点：
-- `context: .` （从项目根构建，而非模块内），以便 COPY common/
+- `context: .`（从项目根构建，而非模块内），以便 COPY common/
 - `WORKDIR /app` 保证路径统一
 
-#### 6d. `.dockerignore`
+#### 5e. 各模块 `.dockerignore`
 
 ```
 __pycache__/
@@ -187,7 +181,7 @@ venv/
 .git/
 ```
 
-#### 6e. `.gitignore`（模块级）
+#### 5f. 各模块 `.gitignore`（模块级）
 
 ```
 __pycache__/
@@ -203,7 +197,7 @@ venv/
 *.sqlite3
 ```
 
-### 第 7 步：GitHub 认证配置
+### 第 6 步：GitHub 认证配置
 
 ```bash
 # 方案 A：Personal Access Token（推荐）
@@ -221,7 +215,7 @@ Token 说明：
 - 必须是 Fine-grained PAT，开启 `Contents: Read and Write` 权限
 - 存储到 `~/.git-credentials` 后，各模块独立推送时自动复用
 
-### 第 8 步：独立推送脚本 `push.sh`
+### 第 7 步：独立推送脚本 `push.sh`
 
 为每个模块创建推送脚本：
 
@@ -261,7 +255,7 @@ cd agents/profile
 bash push.sh "feat(profile): add profile builder core logic"
 ```
 
-### 第 9 步：全局任务状态表 `STATUS.md`
+### 第 8 步：全局任务状态表 `STATUS.md`
 
 创建全局进度跟踪文件，包含：
 
@@ -269,7 +263,7 @@ bash push.sh "feat(profile): add profile builder core logic"
 2. **基础设施** — `.gitignore`、`README`、`push.sh` 等配置状态
 3. **各模块任务** — 按原文档编号（B-PR-01 等），含优先级、状态、完成日期
 4. **各模块文件清单** — 每个需要实现的文件（`src/*.py`、`tests/*.py` 等）
-5. **开发阶段进度** — 第 0 ~ 9 步各阶段状态
+5. **开发阶段进度** — 各阶段状态
 6. **Git 分支状态** — 各分支创建和推送情况
 7. **更新指南** — 如何修改进度
 
@@ -279,35 +273,6 @@ bash push.sh "feat(profile): add profile builder core logic"
 |------|------|:------:|:----:|:--------:|
 | B-PR-01 | 画像 Schema 定义 | P0 | ❌ | — |
 | B-PR-02 | 对话式画像构建 | P0 | ✅ | 2026-06-15 |
-```
-
-### 第 10 步：Git 提交
-
-```bash
-# 首次提交
-git init
-git add <files...>
-git commit -m "chore: initial project setup with ..."
-git remote add origin <repo-url>
-git branch -M main
-git push -u origin main
-
-# 创建 develop 分支
-git checkout -b develop main
-git push -u origin develop
-
-# 后续按模块推送到对应 feature 分支
-```
-
-分支策略：
-```
-main          ← 生产就绪
-  └─ develop  ← 集成开发
-       ├─ feature/agent-profile
-       ├─ feature/agent-tutor
-       ├─ feature/agent-evaluator
-       ├─ feature/agent-safety
-       └─ feature/common-dto
 ```
 
 ---
