@@ -1,6 +1,6 @@
 # 📊 项目全局任务状态表
 
-> 最后更新：2026-06-15
+> 最后更新：2026-06-16
 >
 > 完成一个板块后，将对应 `[ ]` 改为 `[x]`，并更新进度百分比。
 
@@ -11,12 +11,12 @@
 | 板块 | 完成度 | 状态 |
 |------|:------:|:----:|
 | **🟢 agents/profile/** — 画像智能体 | █░░░░░░░░░ **0%** | ❌ 未开始 |
-| **🔵 agents/tutor/** — 辅导智能体 | █░░░░░░░░░ **0%** | ❌ 未开始 |
+| **🔵 agents/tutor/** — 辅导智能体 | ██████████ **100%** | ✅ 已完成 |
 | **🟠 agents/evaluator/** — 评估智能体 | █░░░░░░░░░ **0%** | ❌ 未开始 |
 | **🟣 agents/safety/** — 安全与防幻觉 | █░░░░░░░░░ **0%** | ❌ 未开始 |
 | **⚪ common/** — 共享 DTO | █░░░░░░░░░ **0%** | ❌ 未开始 |
 | **📋 配置与基础设施** | ████████░░ **80%** | ✅ 基座完成 |
-| | **总计** | █░░░░░░░░░ **~3%** |
+| | **总计** | ███░░░░░░░ **~30%** |
 
 ---
 
@@ -77,30 +77,43 @@
 
 | 编号 | 任务 | 优先级 | 状态 | 完成日期 |
 |------|------|:------:|:----:|:--------:|
-| B-TU-01 | 个性化问答引擎 | P0 | ❌ | — |
-| B-TU-02 | 基于画像的答案定制 | P0 | ❌ | — |
-| B-TU-03 | 多模态输入处理 | P1 | ❌ | — |
-| B-TU-04 | 对话上下文管理 | P0 | ❌ | — |
+| B-TU-01 | 个性化问答引擎 | P0 | ✅ | 2026-06-16 |
+| B-TU-02 | 基于画像的答案定制 | P0 | ✅ | 2026-06-16 |
+| B-TU-03 | 多模态输入处理 | P1 | ✅ | 2026-06-16 |
+| B-TU-04 | 对话上下文管理 | P0 | ✅ | 2026-06-16 |
 
 ### 4.2 文件清单
 
 | 路径 | 状态 | 说明 |
 |------|:----:|------|
-| `src/main.py` | ❌ | FastAPI + WebSocket 端点 |
-| `src/config.py` | ❌ | 配置 |
-| `src/models/context.py` | ❌ | 对话上下文模型 |
-| `src/models/dto.py` | ❌ | 消息 DTO |
-| `src/services/tutor_engine.py` | ❌ | 辅导引擎核心 |
-| `src/services/answer_generator.py` | ❌ | 答案生成 |
-| `src/services/context_manager.py` | ❌ | 上下文管理 |
-| `src/services/llm_service.py` | ❌ | 大模型调用 |
-| `src/prompts/system.txt` | ❌ | 系统提示词 |
-| `src/prompts/adapt.txt` | ❌ | 画像适配提示词 |
-| `src/db/chat_history.py` | ❌ | 对话历史存储 |
-| `src/ws/handler.py` | ❌ | WS 消息处理 |
-| `tests/test_tutor_engine.py` | ❌ | 单元测试 |
-| `tests/test_answer_generator.py` | ❌ | 单元测试 |
+| `src/main.py` | ✅ | FastAPI + WebSocket 端点 |
+| `src/config.py` | ✅ | 配置（环境变量驱动） |
+| `src/models/context.py` | ✅ | 对话上下文模型 |
+| `src/models/dto.py` | ✅ | 消息 DTO |
+| `src/services/tutor_engine.py` | ✅ | 辅导引擎核心 |
+| `src/services/answer_generator.py` | ✅ | 答案生成（含多模态） |
+| `src/services/context_manager.py` | ✅ | 上下文管理（10轮摘要） |
+| `src/services/llm_service.py` | ✅ | 大模型调用（OpenAI） |
+| `src/services/profile_service_client.py` | ✅ | 画像服务 REST 客户端 |
+| `src/prompts/system.txt` | ✅ | 系统提示词（角色设定） |
+| `src/prompts/adapt.txt` | ✅ | 画像适配提示词 |
+| `src/db/chat_history.py` | ✅ | 对话历史存储（异步I/O） |
+| `src/ws/handler.py` | ✅ | WS 消息处理 |
+| `tests/test_tutor_engine.py` | ✅ | 10 个单元测试 |
+| `tests/test_answer_generator.py` | ✅ | 7 个单元测试 |
+| `tests/conftest.py` | ✅ | 共享测试配置 |
+| `pytest.ini` | ✅ | pytest 配置 |
+| `requirements.txt` | ✅ | 依赖声明 |
+| `Dockerfile` | ✅ | 容器化部署 |
 | `push.sh` | ✅ | 推送脚本 |
+
+### 4.3 已通过验证
+
+- ✅ 全部 17 个测试通过
+- ✅ readonly-code-review 代码审查通过（3 HIGH + 6 MEDIUM + 5 LOW 问题已全部修复）
+- ✅ WebSocket 流式推送实测验证（DeepSeek API）
+- ✅ 画像缺失时优雅降级
+- ✅ LLM 调用失败时优雅返回错误
 
 ---
 
@@ -191,7 +204,7 @@
 | 第 2 步 | Day 2 | ❌ | 大模型调用封装 |
 | 第 3 步 | Day 3-5 | ❌ | 画像智能体核心 |
 | 第 4 步 | Day 5-6 | ❌ | 画像智能体 WebSocket 接入 |
-| 第 5 步 | Day 6-9 | ❌ | 辅导智能体（可与第 4 步并行） |
+| 第 5 步 | Day 6-9 | ✅ 完成 | 辅导智能体（17 测试通过，手动验证通过） |
 | 第 6 步 | Day 9-12 | ❌ | 评估智能体 |
 | 第 7 步 | Day 12-14 | ❌ | 安全与防幻觉模块 |
 | 第 8 步 | Day 14-18 | ❌ | 三方联调 |
