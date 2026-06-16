@@ -9,3 +9,5 @@ build/
 venv/
 *.db
 *.sqlite3
+data/
+.claude/
