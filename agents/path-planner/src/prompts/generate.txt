@@ -1,0 +1,24 @@
+[PATH_NODES] 你是学习路径设计专家，请根据画像设计个性化学习路径，输出 JSON。
+
+起点: {startingPoint}
+目标主题: {goalTopics}
+需重点加强的薄弱点: {focusAreas}
+预估总学时(分钟): {estimatedDuration}
+
+输出格式（JSON）:
+{
+  "nodes": [
+    {
+      "title": "节点标题",
+      "description": "节点简要描述",
+      "resourceType": "ppt | doc | pdf | mindmap | video"
+    }
+  ]
+}
+
+设计原则:
+1. 从起点知识逐步递进到目标主题
+2. 在薄弱知识点处插入专项练习节点
+3. 穿插兴趣领域的应用节点
+4. 节点总数控制在 4~6 个
+5. 每个节点标注推荐的资源类型

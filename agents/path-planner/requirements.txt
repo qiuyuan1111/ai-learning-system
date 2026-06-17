@@ -1,0 +1,7 @@
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.5,<3.0
+# 共享库（开发期以可编辑模式安装：pip install -e ../../common/python）
+# ai-edu-common
+# 真实 LLM 模式才需要：
+# openai>=1.30
