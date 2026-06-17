@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.py[cod]
 *.pyo
@@ -7,3 +8,16 @@ build/
 .env
 .venv/
 venv/
+
+# Node / TypeScript
+node_modules/
+
+# 本地环境与日志
+.env.local
+*.log
+npm-debug.log*
+
+# 编辑器/系统
+.DS_Store
+.idea/
+.vscode/
