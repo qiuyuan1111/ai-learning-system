@@ -1,6 +1,6 @@
 # 📊 项目全局任务状态表
 
-> 最后更新：2026-06-16
+> 最后更新：2026-06-17
 >
 > 完成一个板块后，将对应 `[ ]` 改为 `[x]`，并更新进度百分比。
 
@@ -10,13 +10,13 @@
 
 | 板块 | 完成度 | 状态 |
 |------|:------:|:----:|
-| **🟢 agents/profile/** — 画像智能体 | █░░░░░░░░░ **0%** | ❌ 未开始 |
+| **🟢 agents/profile/** — 画像智能体 | ██████████ **100%** | ✅ 已完成 |
 | **🔵 agents/tutor/** — 辅导智能体 | ██████████ **100%** | ✅ 已完成 |
 | **🟠 agents/evaluator/** — 评估智能体 | █░░░░░░░░░ **0%** | ❌ 未开始 |
 | **🟣 agents/safety/** — 安全与防幻觉 | █░░░░░░░░░ **0%** | ❌ 未开始 |
 | **⚪ common/** — 共享 DTO | █░░░░░░░░░ **0%** | ❌ 未开始 |
 | **📋 配置与基础设施** | ████████░░ **80%** | ✅ 基座完成 |
-| | **总计** | ███░░░░░░░ **~30%** |
+| | **总计** | █████░░░░░ **~47%** |
 
 ---
 
@@ -42,30 +42,39 @@
 
 | 编号 | 任务 | 优先级 | 状态 | 完成日期 |
 |------|------|:------:|:----:|:--------:|
-| B-PR-01 | 画像 Schema 定义与校验 | P0 | ❌ | — |
-| B-PR-02 | 对话式画像构建（多轮追问） | P0 | ❌ | — |
-| B-PR-03 | 画像增量更新 | P0 | ❌ | — |
-| B-PR-04 | 画像持久化 | P1 | ❌ | — |
+| B-PR-01 | 画像 Schema 定义与校验 | P0 | ✅ | 2026-06-17 |
+| B-PR-02 | 对话式画像构建（多轮追问） | P0 | ✅ | 2026-06-17 |
+| B-PR-03 | 画像增量更新 | P0 | ✅ | 2026-06-17 |
+| B-PR-04 | 画像持久化 | P1 | ✅ | 2026-06-17 |
 
 ### 3.2 文件清单
 
 | 路径 | 状态 | 说明 |
 |------|:----:|------|
-| `src/main.py` | ❌ | FastAPI + WebSocket 端点 |
-| `src/config.py` | ❌ | 配置 |
-| `src/models/schema.py` | ❌ | Pydantic 画像模型 |
-| `src/models/dto.py` | ❌ | 消息 DTO |
-| `src/services/profile_builder.py` | ❌ | 画像构建核心 |
-| `src/services/profile_updater.py` | ❌ | 画像增量更新 |
-| `src/services/llm_service.py` | ❌ | 大模型调用 |
-| `src/prompts/build.txt` | ❌ | 构建提示词 |
-| `src/prompts/update.txt` | ❌ | 更新提示词 |
-| `src/db/repository.py` | ❌ | 数据持久化 |
-| `src/db/memory.py` | ❌ | 对话记忆 |
-| `src/ws/handler.py` | ❌ | WS 消息处理 |
-| `tests/test_profile_builder.py` | ❌ | 单元测试 |
-| `tests/test_schema.py` | ❌ | 单元测试 |
+| `src/main.py` | ✅ | FastAPI + WebSocket 端点 |
+| `src/config.py` | ✅ | 配置（环境变量驱动） |
+| `src/models/schema.py` | ✅ | Pydantic 画像模型（6 维度） |
+| `src/models/dto.py` | ✅ | 消息 DTO |
+| `src/services/profile_builder.py` | ✅ | 画像构建核心（多轮追问） |
+| `src/services/profile_updater.py` | ✅ | 画像增量更新（对话/评估） |
+| `src/services/llm_service.py` | ✅ | 大模型调用（OpenAI 异步） |
+| `src/prompts/build.txt` | ✅ | 构建提示词 |
+| `src/prompts/update.txt` | ✅ | 更新提示词 |
+| `src/db/repository.py` | ✅ | 数据持久化（内存 + SQLAlchemy） |
+| `src/db/memory.py` | ✅ | 对话记忆（环形缓冲区） |
+| `src/ws/handler.py` | ✅ | WS 消息处理（build/update） |
+| `pyproject.toml` | ✅ | 项目管理 + pytest 配置 |
+| `tests/test_profile_builder.py` | ✅ | 5 个单元测试 |
+| `tests/test_schema.py` | ✅ | 10 个单元测试 |
+| `tests/conftest.py` | ✅ | 共享测试配置 |
+| `Dockerfile` | ✅ | 容器化部署 |
+| `requirements.txt` | ✅ | 依赖声明 |
 | `push.sh` | ✅ | 推送脚本 |
+
+### 3.3 已通过验证
+
+- ✅ 全部 **15 个测试通过**（5 builder + 10 schema）
+- ✅ `code-review-expert` 代码审查通过（4 HIGH + 8 MEDIUM 问题已全部修复）
 
 ---
 
@@ -202,8 +211,8 @@
 | 第 0 步 | 仓库初始化 | ✅ 完成 | .gitignore + README + 远程配置 |
 | 第 1 步 | Day 1 | ❌ | 项目初始化 + 公共库协作 |
 | 第 2 步 | Day 2 | ❌ | 大模型调用封装 |
-| 第 3 步 | Day 3-5 | ❌ | 画像智能体核心 |
-| 第 4 步 | Day 5-6 | ❌ | 画像智能体 WebSocket 接入 |
+| 第 3 步 | Day 3-5 | ✅ 完成 | 画像智能体核心（15 测试通过，code-review 通过） |
+| 第 4 步 | Day 5-6 | ✅ 完成 | 画像智能体 WebSocket 接入 |
 | 第 5 步 | Day 6-9 | ✅ 完成 | 辅导智能体（17 测试通过，手动验证通过） |
 | 第 6 步 | Day 9-12 | ❌ | 评估智能体 |
 | 第 7 步 | Day 12-14 | ❌ | 安全与防幻觉模块 |
@@ -218,8 +227,8 @@
 |------|------|:----:|---------|
 | `main` | 生产就绪 | ✅ 已推送 | 初始提交 |
 | `develop` | 集成开发 | ✅ 已推送 | 与 main 同步 |
-| `feature/agent-profile` | 画像智能体 | ❌ 未创建 | — |
-| `feature/agent-tutor` | 辅导智能体 | ❌ 未创建 | — |
+| `feature/agent-profile` | 画像智能体 | ✅ 已合并到 develop | — |
+| `feature/agent-tutor` | 辅导智能体 | ✅ 已合并到 develop | — |
 | `feature/agent-evaluator` | 评估智能体 | ❌ 未创建 | — |
 | `feature/agent-safety` | 安全模块 | ❌ 未创建 | — |
 | `feature/common-dto` | 共享 DTO | ❌ 未创建 | — |
