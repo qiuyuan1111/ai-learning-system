@@ -50,6 +50,10 @@ docker-compose.override.yml
 *secret*
 *credential*
 
+# Node
+node_modules/
+dist/
+
 # Coverage
 coverage/
 .coverage
