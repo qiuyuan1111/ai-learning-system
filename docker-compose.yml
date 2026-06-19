@@ -1,0 +1,30 @@
+# 多服务编排（人员 C 负责的服务）
+# 用法：docker compose up --build
+version: "3.9"
+
+services:
+  resource-gen:
+    build:
+      context: ..
+      dockerfile: agents/resource-gen/Dockerfile
+    ports:
+      - "8090:8090"
+    environment:
+      - PORT=8090
+      - LLM_USE_MOCK=true
+      - FILE_STORAGE_PATH=/app/agents/resource-gen/storage
+    volumes:
+      - resource-storage:/app/agents/resource-gen/storage
+
+  path-planner:
+    build:
+      context: ..
+      dockerfile: agents/path-planner/Dockerfile
+    ports:
+      - "8091:8091"
+    environment:
+      - PORT=8091
+      - LLM_USE_MOCK=true
+
+volumes:
+  resource-storage:

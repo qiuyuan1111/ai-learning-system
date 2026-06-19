@@ -74,7 +74,38 @@ export const useAppState = create<AppState>((set) => ({
           messages: state.messages.map((m) => (m.msgId === message.msgId ? message : m)),
         }
       }
-      return { messages: [...state.messages, message] }
+
+      // 如果当前是流式文本块 (type === 'text')，且上一条消息也是助理发送的同类文本消息，则进行追加，避免生成多个气泡
+      // 同时，当实际答案文本到达时，应当过滤掉同一轮对话中的 “思考中...” 进度条气泡
+      let currentMessages = state.messages
+      if (message.type === 'text') {
+        currentMessages = currentMessages.filter(
+          (m) => !(m.type === 'progress' && m.replyTo === message.replyTo)
+        )
+      }
+
+      if (message.type === 'text' && currentMessages.length > 0) {
+        const lastMsg = currentMessages[currentMessages.length - 1]
+        const isLastMsgAssistantText = 
+          !('sender' in lastMsg) && 
+          lastMsg.type === 'text' && 
+          lastMsg.intent === message.intent
+
+        if (isLastMsgAssistantText) {
+          const updatedLastMsg = {
+            ...lastMsg,
+            content: {
+              ...lastMsg.content,
+              markdown: ((lastMsg.content as any).markdown || '') + ((message.content as any).markdown || '')
+            }
+          }
+          return {
+            messages: [...currentMessages.slice(0, -1), updatedLastMsg]
+          }
+        }
+      }
+
+      return { messages: [...currentMessages, message] }
     })
   },
 

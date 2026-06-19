@@ -1,0 +1,27 @@
+[ADJUST] 你是学习路径优化专家，请根据最新评估结果调整学习路径，输出 JSON。
+
+当前路径节点:
+{current_nodes}
+
+评估发现的薄弱点(severity 越高越严重):
+{weak_points}
+
+更新后的知识水平: {knowledge_level}
+
+输出格式（JSON）:
+{
+  "adjustments": [
+    {
+      "nodeId": "目标节点ID（add 时为新节点占位）",
+      "action": "add | modify | remove | reorder",
+      "title": "新增/修改后的节点标题",
+      "afterNodeId": "add/reorder 时插入到哪个节点之后"
+    }
+  ]
+}
+
+调整规则:
+1. severity >= 3 的薄弱点 → add 一个专项练习节点
+2. 已掌握的节点 → remove 或标记完成
+3. 难度过高/过低 → modify 调整
+4. 顺序不合理 → reorder

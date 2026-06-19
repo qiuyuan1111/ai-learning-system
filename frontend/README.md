@@ -1,73 +1,47 @@
-# React + TypeScript + Vite
+# 💻 个性化学习系统前端 (Frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+本模块是个性化学习系统的客户端应用，为学生提供极致流畅、现代 premium 的多智能体交互式学习界面。
 
-Currently, two official plugins are available:
+## 🎨 设计美学 & 体验设计
+- **拟物化与毛玻璃动效 (Glassmorphism)**: 界面采用精心调配的色彩系统（非普通红绿蓝），融入现代半透明磨砂质感和细腻的微交互动效。
+- **平滑文本流（流式渲染合并）**: 针对大模型返回的高频文本流，通过在状态管理器（Zustand）中合并连续文本包，规避了高频频繁重绘气泡，消除了 React 重绘卡顿，实现平滑输出。
+- **顺滑滚动推底**: 聊天信息流在流式加载期间动态调整滚动行为（使用 `behavior: 'auto'` 进行推底防止一抽一抽的抖动，渲染完成后恢复为 `behavior: 'smooth'` 的平滑物理回弹效果）。
+- **轻量级加载状态**: 当智能体处理或思考时，聊天栏底部和相应位置展示优雅的 `思考中...` 旋转指示器，在返回完成后立即清理。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🛠️ 技术栈
+- **核心框架**: React 18 / TypeScript / Vite
+- **状态管理**: Zustand (全局状态，包含会话、消息列表和加载状态)
+- **UI 组件库**: Ant Design (用于输入框、基础骨架和反馈组件)
+- **样式方案**: 原生 CSS (针对极致美学定制) + 现代 CSS 变量
+- **Markdown & 数学公式支持**: `react-markdown` + `remark-math` + `rehype-katex` (完美支持 LaTeX 学术公式渲染)
 
-## React Compiler
+## 📦 核心页面与功能
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **AI智能多智能体学习助手 (`/chat`)**:
+   - 多轮自然对话画像构建，实时反馈缺失维度，画像构建完成后平滑解锁后续学习阶段。
+   - 答疑辅导助手：实时流式输出，支持 LaTeX 数学公式，提供顺滑的上下文学习体验。
+2. **知识画像展示 (`/profile`)**:
+   - 可视化展示已识别的学生基础、认知风格、学习步调等 6 大维度。
+3. **个性化学习路径 (`/path`)**:
+   - 动态渲染由路径规划智能体生成的学习树节点，展示学习进度。
+4. **学习评估报告 (`/evaluation`)**:
+   - 提供知识点掌握度评估和薄弱点推荐报告。
 
-## Expanding the ESLint configuration
+## 🚀 本地开发与运行
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1. 安装依赖
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. 启动开发服务器
+```bash
+# 启动本地开发服务，运行在 http://localhost:5173/
+npm run dev
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+# 编译项目
+npm run build
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# 预览编译后的产物
+npm run preview
 ```

@@ -1,0 +1,21 @@
+{
+  "name": "@ai-edu/common",
+  "version": "1.0.0",
+  "description": "个性化学习多智能体系统 — 共享 DTO / 枚举 / 工具库",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "lint": "echo \"[lint] placeholder\" && exit 0",
+    "test": "node test/common.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}
