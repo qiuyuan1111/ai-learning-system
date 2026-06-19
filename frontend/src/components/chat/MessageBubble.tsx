@@ -1,6 +1,6 @@
 import React from 'react'
 import { Avatar, Space, Typography, Alert } from 'antd'
-import { UserOutlined, RobotOutlined } from '@ant-design/icons'
+import { UserOutlined, RobotOutlined, LoadingOutlined } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
@@ -86,6 +86,29 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
 
       case 'progress': {
         const progressContent = assistantMsg.content as ProgressContent
+        if (!progressContent.taskId) {
+          return (
+            <div
+              style={{
+                background: 'var(--glass-bg)',
+                color: 'var(--text-color)',
+                border: '1px solid var(--glass-border)',
+                backdropFilter: 'blur(10px)',
+                padding: '12px 18px',
+                borderRadius: '4px 16px 16px 16px',
+                maxWidth: '100%',
+                fontSize: '15px',
+                lineHeight: 1.6,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <LoadingOutlined style={{ color: '#722ed1' }} />
+              <Text style={{ color: 'var(--text-color)' }}>思考中...</Text>
+            </div>
+          )
+        }
         return (
           <ProgressBar
             taskId={progressContent.taskId}

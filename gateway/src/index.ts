@@ -3,10 +3,12 @@ import cors from 'cors'
 import http from 'http'
 import { config } from './config'
 import { loggerMiddleware } from './middleware/logger'
+import { rateLimiterMiddleware } from './middleware/rateLimiter'
 import { errorHandlerMiddleware } from './middleware/errorHandler'
 import { getMockSessionCreate } from './mock/responses'
 import { proxyRouter } from './routes/proxy'
 import { handleUpgrade } from './routes/ws'
+import connectionManager from './ws/connection'
 
 const app = express()
 
@@ -15,6 +17,9 @@ app.use(cors())
 
 // Logger middleware
 app.use(loggerMiddleware)
+
+// Rate limiting middleware
+app.use(rateLimiterMiddleware)
 
 // Dedicated parser-enabled route for creating sessions (local routing)
 app.post('/api/v1/sessions', express.json(), (req, res) => {
@@ -32,6 +37,22 @@ app.post('/api/v1/sessions', express.json(), (req, res) => {
   // Create mock session and token
   const result = getMockSessionCreate(nickname, major, grade)
   res.json(result)
+})
+
+// Internal route for backend microservices to push messages to client WebSockets
+app.post('/api/v1/internal/sessions/:sessionId/push', express.json(), (req, res) => {
+  const { sessionId } = req.params
+  const message = req.body
+
+  console.log(`[Gateway] Internal WS push request received for session ${sessionId}: type=${message.type}`)
+  connectionManager.send(sessionId, message)
+
+  res.json({
+    code: 200,
+    message: 'SUCCESS',
+    data: null,
+    requestId: (req as any).traceId
+  })
 })
 
 // Proxy routes (proxies handle parsing or direct forwarding)

@@ -41,8 +41,12 @@ export const Chat: React.FC = () => {
       const unsubMsg = wsClient.onMessage((msg) => {
         addMessage(msg)
         
-        // Turn off processing animation when done or error is received
-        if (msg.type === 'done' || msg.type === 'error') {
+        // Turn off processing animation when done, error, or single-frame profile_build text is received
+        if (
+          msg.type === 'done' ||
+          msg.type === 'error' ||
+          (msg.intent === 'profile_build' && msg.type === 'text')
+        ) {
           setProcessing(false)
         }
 
@@ -74,8 +78,8 @@ export const Chat: React.FC = () => {
 
   // 2. Auto-scroll to bottom of chat
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    chatEndRef.current?.scrollIntoView({ behavior: isProcessing ? 'auto' : 'smooth' })
+  }, [messages, isProcessing])
 
   // 3. Send Message function
   const handleSend = () => {

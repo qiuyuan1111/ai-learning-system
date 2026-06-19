@@ -141,9 +141,13 @@ function handleProxyMessage(sessionId: string, clientMsg: any) {
   // Determine target websocket URL based on intent
   let targetUrl = ''
   if (intent === 'profile_build') {
-    targetUrl = config.services.profile
+    const base = config.services.profile.endsWith('/') ? config.services.profile.slice(0, -1) : config.services.profile
+    const url = base.endsWith('/ws/chat') ? base : `${base}/ws/chat`
+    targetUrl = `${url}?session_id=${encodeURIComponent(sessionId)}`
   } else if (intent === 'tutoring') {
-    targetUrl = config.services.tutor
+    const base = config.services.tutor.endsWith('/') ? config.services.tutor.slice(0, -1) : config.services.tutor
+    const url = base.endsWith('/ws/chat') ? base : `${base}/ws/chat`
+    targetUrl = `${url}?session_id=${encodeURIComponent(sessionId)}`
   } else {
     // For REST backends, we do not have direct WS URLs. 
     // Usually B/C will have standard WS handlers or we return error/REST relay.
