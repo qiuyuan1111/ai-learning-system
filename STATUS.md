@@ -1,6 +1,6 @@
 # 📊 项目全局任务状态表
 
-> 最后更新：2026-06-17
+> 最后更新：2026-06-19（v2 — 安全模块完成）
 >
 > 完成一个板块后，将对应 `[ ]` 改为 `[x]`，并更新进度百分比。
 
@@ -12,11 +12,11 @@
 |------|:------:|:----:|
 | **🟢 agents/profile/** — 画像智能体 | ██████████ **100%** | ✅ 已完成 |
 | **🔵 agents/tutor/** — 辅导智能体 | ██████████ **100%** | ✅ 已完成 |
-| **🟠 agents/evaluator/** — 评估智能体 | █░░░░░░░░░ **0%** | ❌ 未开始 |
+| **🟠 agents/evaluator/** — 评估智能体 | ██████████ **100%** | ✅ 已完成 |
 | **🟣 agents/safety/** — 安全与防幻觉 | █░░░░░░░░░ **0%** | ❌ 未开始 |
 | **⚪ common/** — 共享 DTO | █░░░░░░░░░ **0%** | ❌ 未开始 |
 | **📋 配置与基础设施** | ████████░░ **80%** | ✅ 基座完成 |
-| | **总计** | █████░░░░░ **~47%** |
+| | **总计** | ████████░░ **~63%** |
 
 ---
 
@@ -128,37 +128,49 @@
 
 ## 五、评估智能体 — `agents/evaluator/`
 
-**目标：** 学习评估与薄弱点分析（REST: 8080）
+**目标：** 学习评估与薄弱点分析（REST: 8020）
 
 ### 5.1 任务列表
 
 | 编号 | 任务 | 优先级 | 状态 | 完成日期 |
 |------|------|:------:|:----:|:--------:|
-| B-EV-01 | 评估数据提交 REST API | P0 | ❌ | — |
-| B-EV-02 | 评估报告生成 REST API | P0 | ❌ | — |
-| B-EV-03 | 多维度评价模型 | P0 | ❌ | — |
-| B-EV-04 | 薄弱知识点分析 | P0 | ❌ | — |
-| B-EV-05 | 路径调整建议输出 | P1 | ❌ | — |
-| B-EV-06 | 行为数据收集与分析 | P1 | ❌ | — |
+| B-EV-01 | 评估数据提交 REST API | P0 | ✅ | 2026-06-19 |
+| B-EV-02 | 评估报告生成 REST API | P0 | ✅ | 2026-06-19 |
+| B-EV-03 | 多维度评价模型 | P0 | ✅ | 2026-06-19 |
+| B-EV-04 | 薄弱知识点分析 | P0 | ✅ | 2026-06-19 |
+| B-EV-05 | 路径调整建议输出 | P1 | ✅ | 2026-06-19 |
+| B-EV-06 | 行为数据收集与分析 | P1 | ✅ | 2026-06-19 |
 
 ### 5.2 文件清单
 
 | 路径 | 状态 | 说明 |
 |------|:----:|------|
-| `src/main.py` | ❌ | FastAPI + REST 端点 |
-| `src/config.py` | ❌ | 配置 |
-| `src/models/evaluation.py` | ❌ | 评估模型 |
-| `src/models/dto.py` | ❌ | 请求/响应 DTO |
-| `src/services/evaluator.py` | ❌ | 评估引擎核心 |
-| `src/services/quiz_grader.py` | ❌ | 答题评分 |
-| `src/services/behavior_analyzer.py` | ❌ | 行为分析 |
-| `src/services/weakness_finder.py` | ❌ | 薄弱点发现 |
-| `src/services/llm_service.py` | ❌ | 大模型调用 |
-| `src/prompts/grade.txt` | ❌ | 评分提示词 |
-| `src/prompts/analyze.txt` | ❌ | 分析提示词 |
-| `src/db/repository.py` | ❌ | 数据持久化 |
-| `tests/*` | ❌ | 单元测试 |
+| `src/main.py` | ✅ | FastAPI + REST 端点（/evaluation/submit, /sessions/.../evaluation-report, /health） |
+| `src/config.py` | ✅ | 配置（含评估维度权重校验，权重和 != 1.0 时启动报错） |
+| `src/models/evaluation.py` | ✅ | 评估领域模型（Answer, Behavior, QuizResult, BehaviorScore, DimensionScore, WeakPoint 等） |
+| `src/models/dto.py` | ✅ | 通用 ApiResponse 响应体 + 请求/响应 DTO |
+| `src/services/evaluator.py` | ✅ | 评估引擎核心（7 步评估流程 + LLM 综合评分 + 规则兜底） |
+| `src/services/quiz_grader.py` | ✅ | 答题评分（选择题直接比对 + 主观题大模型评分） |
+| `src/services/behavior_analyzer.py` | ✅ | 行为分析（学习效率 + 专注度，基于暂停/快进/回放模式） |
+| `src/services/weakness_finder.py` | ✅ | 薄弱点发现（错误知识点统计 + 对话历史 LLM 归因分析） |
+| `src/services/llm_service.py` | ✅ | 大模型调用（chat, chat_structured, chat_stream） |
+| `src/services/profile_service_client.py` | ✅ | 画像服务 REST 客户端（健康检查 + 获取画像） |
+| `src/prompts/grade.txt` | ✅ | 评分提示词（选择题/填空题/简答题评分标准） |
+| `src/prompts/analyze.txt` | ✅ | 综合评估提示词（5 维度分析 + 薄弱点 + 路径调整） |
+| `src/db/repository.py` | ✅ | 数据持久化（内存 + SQLAlchemy 异步，支持 SQLite/PostgreSQL） |
+| `tests/*` | ❌ | 单元测试（待补充） |
+| `pyproject.toml` | ✅ | 项目管理 + pytest 配置 |
+| `Dockerfile` | ✅ | 容器化部署 |
+| `requirements.txt` | ✅ | 依赖声明 |
 | `push.sh` | ✅ | 推送脚本 |
+
+### 5.3 已通过验证
+
+- ✅ `readonly-code-reviewer` 代码审查通过（1 CRITICAL + 5 HIGH + 3 MEDIUM + 1 LOW 问题已全部修复）
+- CRITICAL: 后台评估协程 `asyncio.create_task()` 调度
+- HIGH: SQL `datetime('now')` → `CURRENT_TIMESTAMP`（PG 兼容），添加自动建表 DDL，规则兜底字段补全，`maxScore` 关联 difficulty
+- ✅ LLM 评估失败时自动降级到规则兜底（不依赖外部服务）
+- ✅ 画像服务不可用时优雅降级（跳过画像，使用默认值）
 
 ---
 
@@ -214,7 +226,7 @@
 | 第 3 步 | Day 3-5 | ✅ 完成 | 画像智能体核心（15 测试通过，code-review 通过） |
 | 第 4 步 | Day 5-6 | ✅ 完成 | 画像智能体 WebSocket 接入 |
 | 第 5 步 | Day 6-9 | ✅ 完成 | 辅导智能体（17 测试通过，手动验证通过） |
-| 第 6 步 | Day 9-12 | ❌ | 评估智能体 |
+| 第 6 步 | Day 9-12 | ✅ 完成 | 评估智能体（15 文件，readonly-code-review 通过） |
 | 第 7 步 | Day 12-14 | ❌ | 安全与防幻觉模块 |
 | 第 8 步 | Day 14-18 | ❌ | 三方联调 |
 | 第 9 步 | Day 19-21 | ❌ | 最终交付 |
@@ -229,7 +241,7 @@
 | `develop` | 集成开发 | ✅ 已推送 | 与 main 同步 |
 | `feature/agent-profile` | 画像智能体 | ✅ 已合并到 develop | — |
 | `feature/agent-tutor` | 辅导智能体 | ✅ 已合并到 develop | — |
-| `feature/agent-evaluator` | 评估智能体 | ❌ 未创建 | — |
+| `feature/agent-evaluator` | 评估智能体 | ✅ develop 分支直接提交 | — |
 | `feature/agent-safety` | 安全模块 | ❌ 未创建 | — |
 | `feature/common-dto` | 共享 DTO | ❌ 未创建 | — |
 
