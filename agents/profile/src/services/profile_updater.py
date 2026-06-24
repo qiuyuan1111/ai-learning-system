@@ -1,6 +1,7 @@
 """画像增量更新服务"""
 
 import json
+import logging
 import os
 from typing import Any, Dict, List
 
@@ -19,6 +20,8 @@ from ..models.schema import (
 )
 from ..config import settings
 from .llm_service import LLMService
+
+logger = logging.getLogger(__name__)
 
 
 def _safe_enum(enum_cls, value, default):
@@ -110,7 +113,11 @@ class ProfileUpdater:
             }
         ]
 
-        result = await self.llm.chat_structured(messages)
+        try:
+            result = await self.llm.chat_structured(messages)
+        except Exception as e:  # noqa: BLE001  LLM 调用失败不阻断主流程
+            logger.warning("画像更新（dialogue）LLM 调用失败，跳过本次更新: %s", e)
+            return current_profile
         if result.get("should_update") and result.get("updates"):
             self._merge_updates(current_profile.dimensions, result["updates"])
             current_profile.version += 1
@@ -143,7 +150,11 @@ class ProfileUpdater:
             }
         ]
 
-        result = await self.llm.chat_structured(messages)
+        try:
+            result = await self.llm.chat_structured(messages)
+        except Exception as e:  # noqa: BLE001  LLM 调用失败不阻断主流程
+            logger.warning("画像更新（evaluation）LLM 调用失败，跳过本次更新: %s", e)
+            return current_profile
         if result.get("should_update") and result.get("updates"):
             self._merge_updates(current_profile.dimensions, result["updates"])
             current_profile.version += 1

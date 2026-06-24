@@ -1,13 +1,16 @@
 """FastAPI 入口 + WebSocket 端点"""
 
+import logging
 from contextlib import asynccontextmanager
 from typing import Dict, Any
 import uuid
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, status
 
+logger = logging.getLogger(__name__)
+
 from .config import settings
-from .services.llm_service import LLMService
+from .services.llm_service import LLMService, get_llm_service
 from .services.profile_builder import ProfileBuilder
 from .services.profile_updater import ProfileUpdater
 from .db.repository import ProfileRepository
@@ -33,11 +36,12 @@ async def lifespan(app: FastAPI):
     # 校验配置
     settings.validate()
 
-    # 初始化依赖
-    llm_service = LLMService()
+    # 初始化依赖（按 LLM_USE_MOCK 配置选择真实 / Mock 实现）
+    llm_service = get_llm_service()
     profile_builder = ProfileBuilder(llm_service)
     profile_updater = ProfileUpdater(llm_service)
     profile_repo = ProfileRepository()
+    await profile_repo.init_db()
     dialogue_memory = DialogueMemory(max_size=settings.dialogue_history_size)
     ws_handler = ProfileWSHandler(profile_builder, profile_updater, profile_repo, dialogue_memory)
 
@@ -75,14 +79,13 @@ async def websocket_chat(ws: WebSocket):
     try:
         while True:
             raw = await ws.receive_text()
-            frames = await ws_handler.handle_message(raw, session_id)
-
-            for frame in frames:
+            async for frame in ws_handler.handle_message(raw, session_id):
                 await ws.send_json(frame)
 
     except WebSocketDisconnect:
         pass
     except Exception as e:
+        logger.exception("[诊断] profile WS 处理异常 (session=%s)", session_id)
         try:
             await ws.send_json({
                 "msgId": "",

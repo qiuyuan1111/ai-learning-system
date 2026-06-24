@@ -128,6 +128,19 @@ function handleMockMessage(
       sendText('收到评估小测请求！\n\n我们已经为你准备了当前科目的评估测试题。你可以通过左侧的 **「学习评估报告」** 查看你当前的技能雷达图和薄弱知识点分析，以获得进一步的学习建议。', 'done')
     }, 500)
   }
+
+  // 6. Profile Update Flow（联动：tutor 答疑后动态更新画像，Mock 直接回更新确认）
+  else if (intent === 'profile_update') {
+    setTimeout(() => {
+      connectionManager.send(sessionId, {
+        msgId: 'server_' + Math.random().toString(36).substr(2, 9),
+        replyTo,
+        intent: 'profile_build',
+        type: 'text',
+        content: { markdown: '画像已更新', version: Date.now() % 100 },
+      })
+    }, 300)
+  }
 }
 
 /**
@@ -136,74 +149,264 @@ function handleMockMessage(
 const backendSockets = new Map<string, WebSocket>()
 
 function handleProxyMessage(sessionId: string, clientMsg: any) {
-  const { intent, msgId } = clientMsg
+  const { intent, msgId, content } = clientMsg
+  const text = content?.text || ''
 
-  // Determine target websocket URL based on intent
-  let targetUrl = ''
-  if (intent === 'profile_build') {
-    const base = config.services.profile.endsWith('/') ? config.services.profile.slice(0, -1) : config.services.profile
-    const url = base.endsWith('/ws/chat') ? base : `${base}/ws/chat`
-    targetUrl = `${url}?session_id=${encodeURIComponent(sessionId)}`
-  } else if (intent === 'tutoring') {
-    const base = config.services.tutor.endsWith('/') ? config.services.tutor.slice(0, -1) : config.services.tutor
-    const url = base.endsWith('/ws/chat') ? base : `${base}/ws/chat`
-    targetUrl = `${url}?session_id=${encodeURIComponent(sessionId)}`
-  } else {
-    // For REST backends, we do not have direct WS URLs. 
-    // Usually B/C will have standard WS handlers or we return error/REST relay.
-    console.error(`[WSRouter] Intent ${intent} is not mapped to a WS target service in PROXY mode`)
-    connectionManager.send(sessionId, {
-      msgId: 'err_' + msgId,
-      replyTo: msgId,
-      intent,
-      type: 'error',
-      content: { code: 400, message: `Intent ${intent} requires REST endpoint forwarding` },
-    })
+  // 1) profile_build / profile_update / tutoring → B 的 WS 服务（profile/tutor 的 /ws/chat），直接转发
+  if (intent === 'profile_build' || intent === 'profile_update' || intent === 'tutoring') {
+    relayToBackendWs(sessionId, clientMsg)
     return
   }
 
-  const socketKey = `${sessionId}_${intent}`
+  // 2) resource_generate → C 的 resource-gen（REST）：触发异步生成 + 轮询进度推回
+  if (intent === 'resource_generate') {
+    void bridgeResourceGenerate(sessionId, msgId, text, clientMsg.context)
+    return
+  }
+
+  // 3) path_query → C 的 path-planner（REST）：GET 触发/确认路径，回引导帧
+  if (intent === 'path_query') {
+    void bridgePathQuery(sessionId, msgId, text)
+    return
+  }
+
+  // 4) evaluate → B 的 evaluator（REST）：答题数据走 REST submit/report，WS 仅回引导帧
+  if (intent === 'evaluate') {
+    sendText(
+      sessionId,
+      msgId,
+      'evaluate',
+      '收到评估请求。请完成测验题目后提交，系统将生成评估报告；可在「学习评估报告」查看雷达图与薄弱点分析。',
+      'done'
+    )
+    return
+  }
+
+  console.error(`[WSRouter] Unknown intent in PROXY mode: ${intent}`)
+  connectionManager.send(sessionId, {
+    msgId: 'err_' + msgId,
+    replyTo: msgId,
+    intent,
+    type: 'error',
+    content: { code: 400, message: `Unknown intent: ${intent}` },
+  })
+}
+
+// ── WS 转发：profile_build / profile_update / tutoring（这些后端是真正的 WS 服务）──
+function relayToBackendWs(sessionId: string, clientMsg: any) {
+  const { intent, msgId } = clientMsg
+  // profile_build 与 profile_update 都去 profile 服务；tutoring 去 tutor 服务
+  const isProfile = intent === 'profile_build' || intent === 'profile_update'
+  const svcUrl = isProfile ? config.services.profile : config.services.tutor
+  const base = svcUrl.endsWith('/') ? svcUrl.slice(0, -1) : svcUrl
+  const url = base.endsWith('/ws/chat') ? base : `${base}/ws/chat`
+  const targetUrl = `${url}?session_id=${encodeURIComponent(sessionId)}`
+
+  // socketKey 按目的地归并：同一 session 对同一后端服务只建一条 WS，
+  // 避免 profile_build 与 profile_update 各建一条到 profile 的连接。
+  const dest = isProfile ? 'profile' : 'tutor'
+  const socketKey = `${sessionId}_${dest}`
   let backendWs = backendSockets.get(socketKey)
 
   if (!backendWs || backendWs.readyState !== WebSocket.OPEN) {
-    console.log(`[WSRouter] Establishing new WS connection to backend service: ${targetUrl}`)
-    
+    console.log(`[WSRouter] Establishing backend WS: ${targetUrl}`)
     backendWs = new WebSocket(targetUrl)
     backendSockets.set(socketKey, backendWs)
 
     backendWs.on('open', () => {
-      console.log(`[WSRouter] Backend WS opened. Relaying message: ${msgId}`)
+      console.log(`[WSRouter] Backend WS opened (${intent}). Relaying: ${msgId}`)
       backendWs!.send(JSON.stringify(clientMsg))
     })
 
     backendWs.on('message', (data) => {
-      console.log(`[WSRouter] Received reply from backend WS: ${intent}`)
-      // Relay reply back to the client
       try {
-        const parsedReply = JSON.parse(data.toString())
-        connectionManager.send(sessionId, parsedReply)
+        connectionManager.send(sessionId, JSON.parse(data.toString()))
       } catch (err) {
         connectionManager.send(sessionId, data.toString())
       }
     })
 
     backendWs.on('error', (err) => {
-      console.error(`[WSRouter] Backend WS error on intent ${intent}`, err)
+      console.error(`[WSRouter] Backend WS error (${intent})`, err)
       connectionManager.send(sessionId, {
         msgId: 'err_' + msgId,
         replyTo: msgId,
         intent,
         type: 'error',
-        content: { code: 502, message: `Backend service at ${targetUrl} threw an error` },
+        content: { code: 502, message: `Backend ${intent} service at ${targetUrl} threw an error` },
       })
     })
 
     backendWs.on('close', () => {
-      console.log(`[WSRouter] Backend WS closed for session: ${sessionId}`)
+      console.log(`[WSRouter] Backend WS closed (${intent}) session=${sessionId}`)
       backendSockets.delete(socketKey)
     })
   } else {
-    // Relaying directly if already open
     backendWs.send(JSON.stringify(clientMsg))
+  }
+}
+
+// ── WS 帧辅助 ──
+function randId(prefix: string): string {
+  return prefix + Math.random().toString(36).slice(2, 11)
+}
+
+function sendText(
+  sessionId: string,
+  replyTo: string,
+  intent: string,
+  markdown: string,
+  type: 'text' | 'done' = 'text'
+) {
+  connectionManager.send(sessionId, {
+    msgId: randId('srv_'),
+    replyTo,
+    intent,
+    type,
+    content: { markdown },
+  })
+}
+
+function sendProgress(
+  sessionId: string,
+  replyTo: string,
+  intent: string,
+  taskId: string,
+  progress: number,
+  description: string
+) {
+  connectionManager.send(sessionId, {
+    msgId: randId('srv_'),
+    replyTo,
+    intent,
+    type: 'progress',
+    content: { taskId, progress, description },
+  })
+}
+
+function sendError(sessionId: string, replyTo: string, intent: string, message: string) {
+  connectionManager.send(sessionId, {
+    msgId: randId('srv_'),
+    replyTo,
+    intent,
+    type: 'error',
+    content: { code: 500, message },
+  })
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function guessResourceType(text: string): string {
+  const t = (text || '').toLowerCase()
+  if (t.includes('思维导图') || t.includes('mindmap')) return 'mindmap'
+  if (t.includes('pdf')) return 'pdf'
+  if (t.includes('doc') || t.includes('文档') || t.includes('word')) return 'doc'
+  return 'ppt'
+}
+
+// ── resource_generate 桥接：POST 触发生成 → 轮询 task 进度 → WS 推 progress/done ──
+async function bridgeResourceGenerate(
+  sessionId: string,
+  msgId: string,
+  text: string,
+  context: any
+) {
+  const intent = 'resource_generate'
+  const base = config.services.resourceGen.replace(/\/$/, '')
+
+  const resourceType = context?.resourceType || guessResourceType(text)
+
+  let taskId: string
+  try {
+    const resp = await fetch(
+      `${base}/api/v1/sessions/${sessionId}/resources/generate`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, resourceType }),
+      }
+    )
+    const json = await resp.json()
+    taskId = json?.data?.taskId
+    if (!taskId) {
+      throw new Error(`generate response missing taskId: ${JSON.stringify(json).slice(0, 200)}`)
+    }
+  } catch (e: any) {
+    console.error('[WSRouter] resource_generate trigger failed:', e?.message || e)
+    sendError(sessionId, msgId, intent, `资源生成触发失败: ${e?.message || e}`)
+    return
+  }
+  console.log(`[WSRouter] resource_generate triggered: task=${taskId}`)
+  sendProgress(sessionId, msgId, intent, taskId, 0, '已启动生成任务')
+
+  // 轮询任务进度（每 2s 一次，最多 ~3 分钟）
+  for (let i = 0; i < 90; i++) {
+    await sleep(2000)
+    try {
+      const r = await fetch(`${base}/api/v1/resource-tasks/${taskId}`)
+      const tj = await r.json()
+      const task = tj?.data
+      if (!task) continue
+      sendProgress(
+        sessionId,
+        msgId,
+        intent,
+        taskId,
+        task.progress ?? 0,
+        task.progressDescription || ''
+      )
+      if (task.status === 'completed') {
+        const res = task.result?.resources?.[0]
+        sendText(
+          sessionId,
+          msgId,
+          intent,
+          `资源生成完成（${res?.type || resourceType}）：${res?.title || text}。可在「资源生成」查看或下载。`,
+          'done'
+        )
+        return
+      }
+      if (task.status === 'failed') {
+        sendError(sessionId, msgId, intent, `资源生成失败: ${task.error || '未知错误'}`)
+        return
+      }
+    } catch (e: any) {
+      console.warn('[WSRouter] poll task status error:', e?.message || e)
+    }
+  }
+  sendError(sessionId, msgId, intent, '资源生成超时')
+}
+
+// ── path_query 桥接：GET learning-path 触发/确认路径生成，回引导帧 ──
+async function bridgePathQuery(sessionId: string, msgId: string, text: string) {
+  const intent = 'path_query'
+  const base = config.services.pathPlanner.replace(/\/$/, '')
+  try {
+    const r = await fetch(`${base}/api/v1/sessions/${sessionId}/learning-path`)
+    const j = await r.json()
+    const nodes = j?.data?.nodes || []
+    if (nodes.length) {
+      const list = nodes
+        .map((n: any, i: number) => `${i + 1}. ${n.title}`)
+        .join('\n')
+      sendText(
+        sessionId,
+        msgId,
+        intent,
+        `已为你生成定制学习路径，共 ${nodes.length} 个节点：\n${list}`
+      )
+      sendText(
+        sessionId,
+        msgId,
+        intent,
+        '可在左侧「我的学习路径」查看可视化时间线，含已完成/进行中/待学习节点。',
+        'done'
+      )
+    } else {
+      sendText(sessionId, msgId, intent, '路径生成中，请稍后在「我的学习路径」查看。', 'done')
+    }
+  } catch (e: any) {
+    console.error('[WSRouter] path_query failed:', e?.message || e)
+    sendText(sessionId, msgId, intent, '路径查询失败，请稍后重试。', 'done')
   }
 }

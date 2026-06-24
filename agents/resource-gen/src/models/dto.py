@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from ai_edu_common import Resource, TaskInfo  # noqa: F401  (re-export)
 from ai_edu_common.enums import ResourceTypeEnum
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class GenerationRequest(BaseModel):
@@ -25,11 +25,21 @@ class OutlineSection(BaseModel):
     """大纲章节。"""
 
     model_config = ConfigDict(extra="allow")  # LLM 产出结构允许少量额外字段
-    order: float
+
+    order: float = 0.0  # LLM 偶尔漏返回 order，给默认值容错
     title: str
     description: Optional[str] = None
     estimatedMinutes: Optional[int] = None
     subsections: Optional[List["OutlineSection"]] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_str(cls, data):
+        """LLM 有时把子节返回成纯字符串（如「什么是机器学习？」），
+        这里容错：把字符串自动包装成 {title: <该字符串>}。"""
+        if isinstance(data, str):
+            return {"title": data}
+        return data
 
 
 class Outline(BaseModel):

@@ -92,6 +92,19 @@ export const SessionCreate: React.FC = () => {
             <Paragraph style={{ color: 'var(--text-secondary)', margin: 0 }}>
               构建你的专属知识画像，探索定制化的学习路径与资源生成
             </Paragraph>
+            <Paragraph
+              style={{
+                color: 'var(--text-tertiary)',
+                margin: '12px 0 0 0',
+                fontSize: '12px',
+                background: 'var(--glass-bg)',
+                border: '1px solid var(--glass-border)',
+                borderRadius: '8px',
+                padding: '8px 12px',
+              }}
+            >
+              💡 进入后第 1 步是完成「知识画像」对话（约 2-3 分钟），之后资源、路径、评估才会为你个性化解锁。
+            </Paragraph>
           </div>
 
           {/* Form */}

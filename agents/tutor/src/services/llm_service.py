@@ -8,6 +8,7 @@
 import json
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
+import httpx
 from openai import AsyncOpenAI
 
 from src.config import config
@@ -27,9 +28,11 @@ class LLMService:
         model: Optional[str] = None,
         base_url: Optional[str] = None,
     ):
+        # 智谱是国内服务，禁用系统代理（trust_env=False），避免走 VPN/代理导致连不上
         self.client = AsyncOpenAI(
             api_key=api_key or config.llm_api_key,
             base_url=base_url or config.llm_base_url,
+            http_client=httpx.AsyncClient(trust_env=False),
         )
         self.model = model or config.llm_model
 

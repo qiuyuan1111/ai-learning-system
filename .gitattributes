@@ -1,0 +1,14 @@
+# 跨平台换行符约定：防止 Windows 把脚本改成 CRLF 导致 bash 跑不动
+# 代码/脚本/配置统一用 LF（Linux/Mac/Git Bash 友好）
+*.sh   text eol=lf
+*.py   text eol=lf
+*.ts   text eol=lf
+*.js   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.md   text eol=lf
+
+# Windows 批处理用 CRLF（cmd 需要）
+*.bat  text eol=crlf
+*.cmd  text eol=crlf

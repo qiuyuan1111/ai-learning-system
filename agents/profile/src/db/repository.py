@@ -36,6 +36,24 @@ class ProfileRepository:
             self._engine = create_async_engine(db_url, echo=settings.debug)
             self._session_factory = sessionmaker(self._engine, class_=AsyncSession, expire_on_commit=False)
 
+    async def init_db(self) -> None:
+        """建表（幂等）。profiles 表存序列化的画像 JSON。
+
+        原代码只用了 profiles 表却从未建表，导致首次查询即 OperationalError。
+        """
+        if not self._engine:
+            return
+        async with self._engine.begin() as conn:
+            await conn.execute(
+                sa.text(
+                    "CREATE TABLE IF NOT EXISTS profiles ("
+                    "session_id TEXT PRIMARY KEY, "
+                    "data TEXT NOT NULL, "
+                    "updated_at TEXT NOT NULL"
+                    ")"
+                )
+            )
+
     async def save(self, profile: UserProfile) -> None:
         """保存或更新画像（upsert）"""
         self._profiles[profile.session_id] = profile

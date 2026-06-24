@@ -14,14 +14,14 @@ class Settings:
 
     # 服务配置
     host: str = field(default_factory=lambda: os.getenv("EVALUATOR_HOST", "0.0.0.0"))
-    port: int = field(default_factory=lambda: int(os.getenv("EVALUATOR_PORT", "8020")))
+    port: int = field(default_factory=lambda: int(os.getenv("EVALUATOR_PORT", "8080")))
     debug: bool = field(default_factory=lambda: os.getenv("DEBUG", "false").lower() == "true")
 
     # 数据库配置
     db_url: str = field(default_factory=lambda: os.getenv("DB_URL", "sqlite:///./evaluator.db"))
 
     # 画像服务调用（REST 调用，可选）
-    profile_service_url: str = field(default_factory=lambda: os.getenv("PROFILE_SERVICE_URL", "http://localhost:8000"))
+    profile_service_url: str = field(default_factory=lambda: os.getenv("PROFILE_SERVICE_URL", "http://localhost:8081"))
     profile_service_timeout: int = field(default_factory=lambda: int(os.getenv("PROFILE_SERVICE_TIMEOUT", "10")))
 
     # 评估维度权重（总和为 1.0）
