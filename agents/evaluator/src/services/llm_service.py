@@ -6,6 +6,7 @@
 import json
 from typing import AsyncGenerator, List, Optional
 
+import httpx
 from openai import AsyncOpenAI, APIError, APIConnectionError, RateLimitError
 
 from ..config import settings
@@ -20,11 +21,13 @@ class LLMService:
     """大模型调用封装，提供评估场景所需的完成接口"""
 
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
+        # 智谱是国内服务，禁用系统代理（trust_env=False），避免走 VPN/代理导致连不上
         self.client = AsyncOpenAI(
             api_key=api_key or settings.llm_api_key,
             base_url=settings.llm_base_url or None,
             timeout=60.0,
             max_retries=2,
+            http_client=httpx.AsyncClient(trust_env=False),
         )
         self.model = model or settings.llm_model
 

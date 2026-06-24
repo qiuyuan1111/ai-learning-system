@@ -19,11 +19,13 @@ logger = logging.getLogger(__name__)
 class ContentWriter:
     """内容撰写智能体。"""
 
-    def __init__(self, llm: LlmService) -> None:
+    def __init__(self, llm: LlmService, max_concurrency: int = 2) -> None:
         self.llm = llm
+        # 限制同时调 LLM 的章节数，避免短时间并发请求触发智谱 RPM 限流(429)。
+        self._sem = asyncio.Semaphore(max_concurrency)
 
     async def write_all(self, outline: Outline, profile: dict) -> List[SectionContent]:
-        # 仅对顶层章节并行；子章节并入父章节内容中
+        # 仅对顶层章节并行；子章节并入父章节内容中（用信号量限流，避免打满限流配额）
         tasks = [
             self._write_section(section, outline.title, profile)
             for section in outline.sections
@@ -42,5 +44,6 @@ class ContentWriter:
             f"章节说明: {section.description or '无'}\n"
             "要求：结构清晰（小标题+要点+示例），控制在 200~400 字。"
         )
-        markdown = await self.llm.chat(prompt)
+        async with self._sem:
+            markdown = await self.llm.chat(prompt)
         return SectionContent(title=section.title, order=section.order, markdown=markdown)

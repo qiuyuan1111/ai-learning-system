@@ -33,26 +33,30 @@ export const MainLayout: React.FC = () => {
     navigate('/')
   }
 
+  // 软引导：画像完成仅作状态提示，不锁定任何功能（始终可点）
+  const profileReady = profile?.stage === 'completed'
+
+  // 侧边栏按「学习顺序」排列：①认识你 → ②资源 → ③路径 → ④评估（答疑在聊天页内）
   const menuItems = [
     {
       key: '/chat',
       icon: <MessageOutlined style={{ fontSize: '16px' }} />,
-      label: '智能学习助手',
+      label: profileReady ? '① 我的画像 ✓' : '① 先认识你（从这里开始）',
     },
     {
       key: '/resources',
       icon: <FolderOpenOutlined style={{ fontSize: '16px' }} />,
-      label: '学习资源库',
+      label: '② 学习资源',
     },
     {
       key: '/path',
       icon: <NodeIndexOutlined style={{ fontSize: '16px' }} />,
-      label: '我的学习路径',
+      label: '③ 学习路径',
     },
     {
       key: '/evaluation',
       icon: <BarChartOutlined style={{ fontSize: '16px' }} />,
-      label: '学习评估报告',
+      label: '④ 能力评估',
     },
   ]
 

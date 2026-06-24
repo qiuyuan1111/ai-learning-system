@@ -89,7 +89,15 @@ if (config.mockMode) {
     const proxyOptions: any = {
       target: route.target,
       changeOrigin: route.changeOrigin,
-      pathRewrite: route.pathRewrite,
+      // 关键：express 用 mount path（proxyRouter.use(route.path, ...)）挂载时，
+      // 会把 req.url 改写成"匹配后的剩余路径"（如精确匹配时变成 '/'），
+      // 导致 http-proxy-middleware 转发丢掉前缀、后端 404。
+      // 这里用 pathRewrite 函数从 req.originalUrl 还原完整请求路径；
+      // evaluator 后端不带 /api/v1，再剥掉它；rg/pp 带前缀，原样转发。
+      pathRewrite: (_path: string, req: any) => {
+        const full = req.originalUrl || req.url
+        return route.stripApiV1 ? full.replace(/^\/api\/v1/, '') : full
+      },
       logLevel: 'debug',
       onError: (err: any, req: Request, res: Response) => {
         res.status(502).json({
