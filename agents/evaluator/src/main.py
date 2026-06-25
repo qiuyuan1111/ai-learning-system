@@ -10,7 +10,7 @@ import asyncio
 import logging
 import uuid
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List
+from typing import Dict, List
 
 from fastapi import FastAPI, HTTPException, Request
 
@@ -97,7 +97,7 @@ app = FastAPI(
 
 
 @app.get("/health")
-async def health_check() -> Dict[str, Any]:
+async def health_check() -> Dict[str, str]:
     """健康检查
 
     验证服务自身状态及关键下游服务（画像服务）的连通性。

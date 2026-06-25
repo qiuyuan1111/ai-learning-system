@@ -61,14 +61,8 @@ node_modules/
 # Coverage
 coverage/
 
-# 个人设计笔记，不提交
-TODO-*.md
+# Claude Code 工具目录（个人/工具产物，不上传）
 .claude/
-
-# 临时调试脚本 / 本地参考文档，不提交
-_glm_timing.py
-enhance.md
-CLAUDE.md
 
 # 生成产物（resource-gen 运行/测试生成的 PPT/PDF 等，留本地）
 agents/*/storage/*

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Card, Select, Table, Space, Button, Typography, message, Tag, Empty } from 'antd'
+import { Card, Select, Table, Space, Button, Typography, message, Tag } from 'antd'
 import {
   DownloadOutlined,
   FilePdfOutlined,
@@ -177,18 +177,6 @@ export const ResourceLibrary: React.FC = () => {
         columns={columns}
         rowKey="resourceId"
         loading={loading}
-        locale={{
-          emptyText: (
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description={
-                <span style={{ color: 'var(--text-secondary)' }}>
-                  还没有专属资源。回到「知识画像」对话页，让我为你生成思维导图、PPT 或导读文档。
-                </span>
-              }
-            />
-          ),
-        }}
         pagination={{
           current: pagination.page,
           pageSize: pagination.pageSize,
