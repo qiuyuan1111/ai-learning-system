@@ -1,200 +1,148 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Space, Badge, Typography, message, Steps } from 'antd'
-import { InfoCircleOutlined } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
+import { Input, Button, Space, Badge, Radio, Typography, Empty, message } from 'antd'
+import { SendOutlined, InfoCircleOutlined, MessageOutlined } from '@ant-design/icons'
 import { useAppState } from '../stores'
 import { wsClient } from '../services/ws'
-import MessageList from '../components/chat/MessageList'
-import ChatInput from '../components/chat/ChatInput'
-import AgentTab from '../components/chat/AgentTab'
-import type { DialogueTurn } from '../types'
+import MessageBubble from '../components/chat/MessageBubble'
 
 const { Text, Title } = Typography
 
-// 五阶段学习旅程（顺序即引导顺序）。对话型 agent（画像/答疑）切 currentIntent，
-// 其余（资源/路径/评估）跳路由到各自独立页面。
-const FLOW_STEPS = [
-  { title: '知识画像', intent: 'profile_build', path: '/chat' },
-  { title: '学习资源', intent: 'resource_generate', path: '/resources' },
-  { title: '学习路径', intent: 'path_query', path: '/path' },
-  { title: '智能答疑', intent: 'tutoring', path: '/chat' },
-  { title: '能力评估', intent: 'evaluate', path: '/evaluation' },
-] as const
-const INTENT_TO_STEP: Record<string, number> = {
-  profile_build: 0,
-  resource_generate: 1,
-  path_query: 2,
-  tutoring: 3,
-  evaluate: 4,
-}
-
 export const Chat: React.FC = () => {
-  const navigate = useNavigate()
   const token = useAppState((state) => state.token)
-  const profile = useAppState((state) => state.profile)
-  const setSession = useAppState((state) => state.setSession)
+  const messages = useAppState((state) => state.messages)
   const addMessage = useAppState((state) => state.addMessage)
-  const addUserMessage = useAppState((state) => state.addUserMessage)
-
+  const setMessages = useAppState((state) => state.setMessages)
+  
   const isConnected = useAppState((state) => state.isConnected)
   const setConnected = useAppState((state) => state.setConnected)
   const isProcessing = useAppState((state) => state.isProcessing)
   const setProcessing = useAppState((state) => state.setProcessing)
-
+  
   const currentIntent = useAppState((state) => state.currentIntent)
   const setCurrentIntent = useAppState((state) => state.setCurrentIntent)
-  const messagesByIntent = useAppState((state) => state.messagesByIntent)
 
-  const profileReady = profile?.stage === 'completed'
-  const currentStep = profileReady ? INTENT_TO_STEP[currentIntent] ?? 0 : 0
-
+  const [inputText, setInputText] = useState('')
   const [wsStatus, setWsStatus] = useState<'CONNECTING' | 'OPEN' | 'CLOSING' | 'CLOSED'>('CLOSED')
+  
+  const chatEndRef = useRef<HTMLDivElement>(null)
 
-  // 联动节流：tutor 答疑完成后，攒最近几轮问答 + 30s 去抖，再发 profile_update
-  const profileUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // 1. 建立 WebSocket 连接
+  // 1. Establish WebSocket connection on mount
   useEffect(() => {
-    if (!token) return
-    wsClient.connect(token)
+    if (token) {
+      wsClient.connect(token)
 
-    const unsubStatus = wsClient.onStatusChange((status) => {
-      setWsStatus(status)
-      setConnected(status === 'OPEN')
-    })
+      // Listen for socket status changes
+      const unsubStatus = wsClient.onStatusChange((status) => {
+        setWsStatus(status)
+        setConnected(status === 'OPEN')
+      })
 
-    const unsubMsg = wsClient.onMessage((msg) => {
-      addMessage(msg)
-
-      // 关闭处理动画：done / error / 画像单帧 text
-      if (
-        msg.type === 'done' ||
-        msg.type === 'error' ||
-        (msg.intent === 'profile_build' && msg.type === 'text')
-      ) {
-        setProcessing(false)
-      }
-
-      // 画像构建完成（done 帧）：解锁后续
-      if (msg.intent === 'profile_build' && msg.type === 'done') {
-        const cur = useAppState.getState().profile
-        if (cur && cur.stage === 'init') {
-          setSession(useAppState.getState().sessionId!, useAppState.getState().token!, {
-            ...cur,
-            stage: 'completed',
-          })
-          message.success('🎉 学科画像构建完成！资源、路径、评估已为你解锁。')
+      // Listen for incoming messages
+      const unsubMsg = wsClient.onMessage((msg) => {
+        addMessage(msg)
+        
+        // Turn off processing animation when done, error, or single-frame profile_build text is received
+        if (
+          msg.type === 'done' ||
+          msg.type === 'error' ||
+          (msg.intent === 'profile_build' && msg.type === 'text')
+        ) {
+          setProcessing(false)
         }
-      }
 
-      // 画像动态更新（联动回帧）：刷新 store.profile（version 推进）
-      if (msg.intent === 'profile_build' && msg.type === 'text' && (msg.content as any)?.version) {
-        const cur = useAppState.getState().profile
-        if (cur) {
-          setSession(useAppState.getState().sessionId!, useAppState.getState().token!, {
-            ...cur,
-            version: (msg.content as any).version,
-          })
-        }
-      }
-
-      // 联动触发：tutor 答疑完成 → 攒问答 → 30s 去抖发 profile_update
-      if (msg.intent === 'tutoring' && msg.type === 'done') {
-        scheduleProfileUpdate()
-      }
-    })
-
-    return () => {
-      unsubStatus()
-      unsubMsg()
-      wsClient.disconnect()
-      if (profileUpdateTimer.current) clearTimeout(profileUpdateTimer.current)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, addMessage, setConnected, setProcessing])
-
-  // 从 tutoring 分区提取最近 N 轮问答（user question + assistant markdown），组 dialogue
-  const buildRecentDialogue = (turns = 3): DialogueTurn[] => {
-    const tutorMsgs = messagesByIntent['tutoring'] || []
-    const dialogue: DialogueTurn[] = []
-    // 倒序找最近 turns 个 user 气泡，配对其后的 assistant text
-    for (let i = tutorMsgs.length - 1; i >= 0 && dialogue.length / 2 < turns; i--) {
-      const m = tutorMsgs[i] as any
-      if ('sender' in m && m.sender === 'user') {
-        dialogue.unshift({ role: 'user', content: m.content })
-        // 找该 user 之后第一条 assistant text
-        for (let j = i + 1; j < tutorMsgs.length; j++) {
-          const a = tutorMsgs[j] as any
-          if (!('sender' in a) && a.type === 'text') {
-            dialogue.unshift({ role: 'assistant', content: (a.content as any)?.markdown || '' })
-            break
+        // Check if user completed the knowledge profile onboarding
+        if (msg.intent === 'profile_build') {
+          const contentText = (msg.content as any)?.markdown || ''
+          if (contentText.includes('画像已经收集完成') || contentText.includes('画像收集完成')) {
+            const currentProfile = useAppState.getState().profile
+            if (currentProfile && currentProfile.stage === 'init') {
+              const updatedProfile = { ...currentProfile, stage: 'completed' }
+              useAppState.getState().setSession(
+                useAppState.getState().sessionId!,
+                useAppState.getState().token!,
+                updatedProfile
+              )
+              message.success('🎉 学科画像构建完成！您的个性化学习路径和资源已成功解锁。')
+            }
           }
         }
+      })
+
+      return () => {
+        unsubStatus()
+        unsubMsg()
+        wsClient.disconnect()
       }
     }
-    // 保证 user/assistant 成对，过滤孤儿
-    const paired: DialogueTurn[] = []
-    for (let i = 0; i + 1 < dialogue.length; i += 2) {
-      if (dialogue[i].role === 'assistant' && dialogue[i + 1].role === 'user') {
-        paired.push(dialogue[i + 1], dialogue[i])
-      }
-    }
-    return paired.slice(-turns * 2)
-  }
+  }, [token, addMessage, setConnected, setProcessing])
 
-  // 30s 去抖：避免每答一题就触发一次画像更新
-  const scheduleProfileUpdate = () => {
-    if (!profileReady) return // 画像未建好前不联动
-    if (profileUpdateTimer.current) clearTimeout(profileUpdateTimer.current)
-    profileUpdateTimer.current = setTimeout(() => {
-      const dialogue = buildRecentDialogue(3)
-      if (dialogue.length === 0) return
-      wsClient.send('profile_update', '', { dialogue })
-    }, 30000)
-  }
+  // 2. Auto-scroll to bottom of chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: isProcessing ? 'auto' : 'smooth' })
+  }, [messages, isProcessing])
 
-  // 2. 发送消息
-  const handleSend = (text: string) => {
-    if (!text.trim()) return
+  // 3. Send Message function
+  const handleSend = () => {
+    if (!inputText.trim()) return
     if (!isConnected) {
       message.warning('连接已断开，请等待网络重新连接')
       return
     }
 
-    addUserMessage(currentIntent, text)
+    // Add user message to state
+    const userMsgId = 'user_' + Math.random().toString(36).substr(2, 9)
+    const userMsg = {
+      msgId: userMsgId,
+      sender: 'user' as const,
+      content: inputText,
+    }
+
+    // Insert user bubble into messages list
+    setMessages([...messages, userMsg as any])
+    
+    // Set processing state to true
     setProcessing(true)
-    wsClient.send(currentIntent, text)
+
+    // Send via WebSocket Client
+    wsClient.send(currentIntent, inputText)
+
+    setInputText('')
   }
 
-  // 流程条点击：软引导，全部可点（不再锁定）
-  const onStepClick = (i: number) => {
-    const step = FLOW_STEPS[i]
-    if (step.intent === 'profile_build' || step.intent === 'tutoring') {
-      setCurrentIntent(step.intent)
-    } else {
-      navigate(step.path)
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
     }
   }
 
+  // Get status color for status indicator badge
   const getStatusBadge = () => {
     switch (wsStatus) {
       case 'OPEN':
         return <Badge status="success" text="网关连接成功" />
       case 'CONNECTING':
         return <Badge status="processing" text="网关连接中..." style={{ color: '#faad14' }} />
+      case 'CLOSED':
+      case 'CLOSING':
       default:
         return <Badge status="error" text="网关连接已断开" />
     }
   }
 
+  // Descriptions of intents to help student choose
   const getIntentDesc = () => {
     switch (currentIntent) {
       case 'profile_build':
         return '画像智能体：分析你的知识背景，帮你定制个性化教育档案。'
       case 'tutoring':
-        return '辅导智能体：为你提供课程概念的深入问答和学习辅导，并把你的薄弱点回写到画像。'
-      default:
-        return '选择上方能力，开始个性化学习。'
+        return '辅导智能体：为你提供课程概念的深入问答和学习辅导。'
+      case 'evaluate':
+        return '评估智能体：针对各科目进行小测与出题，评估当前知识掌握情况。'
+      case 'resource_generate':
+        return '资源生成智能体：为当前课程生成专属于你的大纲、脑图、PPT和练习册。'
+      case 'path_query':
+        return '路径规划智能体：查询并动态优化你的专业学习主路径图。'
     }
   }
 
@@ -224,50 +172,100 @@ export const Chat: React.FC = () => {
         </Space>
       </div>
 
-      {/* 2. 引导式流程条：五阶段学习旅程（软引导，未完成画像仅灰显不锁定） */}
-      <div style={{ marginBottom: '16px' }}>
-        <Steps
-          size="small"
-          current={currentStep}
-          onChange={onStepClick}
-          items={FLOW_STEPS.map((s) => ({ title: s.title }))}
-        />
-      </div>
-
-      {/* 3. 功能切换条：按学习旅程 ①~⑤ 排列，与上方 Steps 完全对齐。
-            画像/答疑是对话型（切 currentIntent，独立消息分区）；资源/路径/评估跳路由。 */}
+      {/* 2. Intent Selector */}
       <div style={{ marginBottom: '16px', textAlign: 'center' }}>
-        <Space size="middle">
-          <AgentTab
-            active={currentIntent === 'profile_build'}
-            onClick={() => setCurrentIntent('profile_build')}
-          >
-            ① 知识画像
-          </AgentTab>
-          <AgentTab onClick={() => navigate('/resources')} dim={!profileReady}>
-            ② 学习资源
-          </AgentTab>
-          <AgentTab onClick={() => navigate('/path')} dim={!profileReady}>
-            ③ 学习路径
-          </AgentTab>
-          <AgentTab
-            active={currentIntent === 'tutoring'}
-            onClick={() => setCurrentIntent('tutoring')}
-            dim={!profileReady}
-          >
-            ④ 智能答疑
-          </AgentTab>
-          <AgentTab onClick={() => navigate('/evaluation')} dim={!profileReady}>
-            ⑤ 能力评估
-          </AgentTab>
-        </Space>
+        <Radio.Group
+          value={currentIntent}
+          onChange={(e) => setCurrentIntent(e.target.value)}
+          buttonStyle="solid"
+          size="middle"
+        >
+          <Radio.Button value="profile_build">👥 知识画像</Radio.Button>
+          <Radio.Button value="tutoring">📚 学习答疑</Radio.Button>
+          <Radio.Button value="evaluate">✍️ 评估测试</Radio.Button>
+          <Radio.Button value="resource_generate">🚀 资源生成</Radio.Button>
+          <Radio.Button value="path_query">🗺️ 路径优化</Radio.Button>
+        </Radio.Group>
       </div>
 
-      {/* 4. 消息区（当前对话 agent 的独立分区） */}
-      <MessageList isProcessing={isProcessing} />
+      {/* 3. Messages List Area */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px',
+          background: 'var(--chat-bg)',
+          borderRadius: '12px',
+          border: '1px solid var(--glass-border)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {messages.length === 0 ? (
+          <div style={{ margin: 'auto', textAlign: 'center' }}>
+            <Empty
+              image={<MessageOutlined style={{ fontSize: '48px', color: '#bfbfbf' }} />}
+              description={
+                <Space direction="vertical" size="small">
+                  <Text type="secondary" style={{ fontWeight: 500, fontSize: '16px' }}>
+                    开启一次智能学习会话
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: '13px' }}>
+                    在下方输入框中输入你的问题，选择不同意图，与相应的 AI 智能体对话吧。
+                  </Text>
+                </Space>
+              }
+            />
+          </div>
+        ) : (
+          messages.map((msg) => <MessageBubble key={msg.msgId} message={msg} />)
+        )}
+        
+        {/* Loading/Typing Indicator */}
+        {isProcessing && (
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '20px' }}>
+            <Badge status="processing" text="AI 正在思考并生成中..." style={{ color: '#722ed1', fontWeight: 500 }} />
+          </div>
+        )}
+        <div ref={chatEndRef} />
+      </div>
 
-      {/* 5. 输入框（仅网络断开禁用，不再因画像未完成禁用） */}
-      <ChatInput isConnected={isConnected} onSend={handleSend} />
+      {/* 4. Footer Input Box */}
+      <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+        <Input.TextArea
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          onKeyDown={handleKeyPress}
+          placeholder={isConnected ? "输入你的学习诉求，按 Enter 键发送..." : "网关未连接，请稍后..."}
+          disabled={!isConnected}
+          autoSize={{ minRows: 2, maxRows: 4 }}
+          style={{
+            borderRadius: '8px',
+            resize: 'none',
+            fontSize: '14px',
+            border: '1px solid var(--input-border)',
+            background: 'var(--input-bg)',
+            color: 'var(--text-color)',
+          }}
+        />
+        <Button
+          type="primary"
+          icon={<SendOutlined />}
+          onClick={handleSend}
+          disabled={!inputText.trim() || !isConnected}
+          style={{
+            height: 'auto',
+            width: '80px',
+            borderRadius: '8px',
+            background: 'linear-gradient(135deg, #1890ff 0%, #722ed1 100%)',
+            border: 'none',
+            fontWeight: 600,
+          }}
+        >
+          发送
+        </Button>
+      </div>
     </div>
   )
 }

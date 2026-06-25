@@ -161,8 +161,5 @@ class UserProfile(BaseModel):
     session_id: str
     dimensions: ProfileDimensions
     raw_dialogue: List[str] = Field(default_factory=list, description="构建过程中的对话原文")
-    # 上下文管理：早期对话轮次被压缩进摘要，raw_dialogue 仅保留最近 N 轮原文（滑动窗口）
-    dialogue_summary: Optional[str] = Field(default=None, description="早期对话轮次的压缩摘要")
-    summary_turns: int = Field(default=0, description="已压缩进摘要的轮次数")
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     version: int = 1

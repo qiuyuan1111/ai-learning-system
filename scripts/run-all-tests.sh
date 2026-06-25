@@ -6,9 +6,7 @@
 #   - path-planner      ：pytest
 #
 # 用法：
-#   bash scripts/run-all-tests.sh           # 默认（进度点 + 汇总）
-#   bash scripts/run-all-tests.sh -v        # 详细：列出每个测试用例
-#   bash scripts/run-all-tests.sh -v -s     # 详细 + 显示 print 输出
+#   bash scripts/run-all-tests.sh
 #
 # Python 解释器探测顺序：
 #   1. 环境变量 PYTHON（若已 export）
@@ -44,15 +42,15 @@ run "[1/4] common (TypeScript)"
 
 # 2) common (Python)
 run "[2/4] common (Python)"
-( cd "$ROOT/common/python" && "${PY_CMD[@]}" -m pytest "$@" ) || FAILED=1
+( cd "$ROOT/common/python" && "${PY_CMD[@]}" -m pytest -q ) || FAILED=1
 
 # 3) resource-gen
 run "[3/4] agents/resource-gen"
-( cd "$ROOT/agents/resource-gen" && "${PY_CMD[@]}" -m pytest "$@" ) || FAILED=1
+( cd "$ROOT/agents/resource-gen" && "${PY_CMD[@]}" -m pytest -q ) || FAILED=1
 
 # 4) path-planner
 run "[4/4] agents/path-planner"
-( cd "$ROOT/agents/path-planner" && "${PY_CMD[@]}" -m pytest "$@" ) || FAILED=1
+( cd "$ROOT/agents/path-planner" && "${PY_CMD[@]}" -m pytest -q ) || FAILED=1
 
 echo ""
 if [ "$FAILED" -eq 0 ]; then

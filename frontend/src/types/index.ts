@@ -47,14 +47,9 @@ export interface Attachment {
   mimeType: string
 }
 
-export interface DialogueTurn {
-  role: 'user' | 'assistant'
-  content: string
-}
-
 export interface ClientMessage {
   msgId: string
-  intent: 'profile_build' | 'profile_update' | 'resource_generate' | 'tutoring' | 'path_query' | 'evaluate'
+  intent: 'profile_build' | 'resource_generate' | 'tutoring' | 'path_query' | 'evaluate'
   content: {
     text: string
     attachments?: Attachment[]
@@ -62,8 +57,6 @@ export interface ClientMessage {
   context?: {
     resourceId?: string
     courseId?: string
-    // 联动数据通道：tutor 答疑后动态更新画像时，携带最近几轮问答原文给 profile 服务
-    dialogue?: DialogueTurn[]
   }
 }
 

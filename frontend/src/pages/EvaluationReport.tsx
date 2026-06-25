@@ -182,7 +182,7 @@ export const EvaluationReport: React.FC = () => {
           { action: 'read_resource', resourceId: 'res_math_1', timestamp: new Date().toISOString() },
         ],
       })
-      message.success('测评提交成功！正在基于最新的答题与学习行为重新评估学情画像...')
+      message.success('测评提交成功！正在基于最新的答题 and 学习行为重新评估学情画像...')
       // Wait a moment and fetch updated report
       setTimeout(() => {
         fetchReport()

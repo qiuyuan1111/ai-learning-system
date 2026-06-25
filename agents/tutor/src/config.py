@@ -15,7 +15,7 @@ class AppConfig:
 
     # ---- FastAPI ----
     host: str = os.getenv("TUTOR_HOST", "0.0.0.0")
-    port: int = int(os.getenv("TUTOR_PORT", "8082"))
+    port: int = int(os.getenv("TUTOR_PORT", "8010"))
 
     # ---- 大模型 ----
     llm_api_key: str = os.getenv("LLM_API_KEY", "")
@@ -25,7 +25,7 @@ class AppConfig:
     # ---- 画像服务（REST 调用） ----
     profile_service_url: str = os.getenv(
         "PROFILE_SERVICE_URL",
-        "http://localhost:8081",
+        "http://localhost:8000",
     )
     profile_service_timeout: int = int(os.getenv("PROFILE_SERVICE_TIMEOUT", "10"))
 
